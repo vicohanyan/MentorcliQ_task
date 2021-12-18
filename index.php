@@ -15,7 +15,8 @@
 
 <?php
 ini_set("error_reporting",1);
-
+ini_set("display_errors",1);
+ini_set("display_startup_errors",1);
 
 const FILE_UPLOAD_FOLDER = './storage/';
 
@@ -43,11 +44,9 @@ if(!empty($_FILES['csv_file'])){
     echo  'data is empty';
 }
 
-
 function parsingData(){
     $data = parseCSV(FILE_UPLOAD_FOLDER."employees.xls");
 
-    var_dump($data);
 }
 
 function parseCSV(string $path, string $delimiter = ","): array
@@ -64,3 +63,15 @@ function parseCSV(string $path, string $delimiter = ","): array
     }
     return $file;
 }
+
+$arrayData = ["A","B","C","D","e","f"];
+$pairCount = (count($arrayData) * (count($arrayData) -1))/2;
+$data = [];
+for ($i = 0; $i < $pairCount; $i++ ){
+    for($k = 0;$k < count($arrayData)-1;$k+=2){
+        $data[$i][] = [$arrayData[$k],$arrayData[$k + 1]];
+    }
+}
+
+
+var_dump($data);
