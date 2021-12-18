@@ -64,14 +64,14 @@ function parseCSV(string $path, string $delimiter = ","): array
     return $file;
 }
 
-$arrayData = ["A","B","C","D","e","f"];
+$arrayData = ["A","B","C","D"];
 $pairCount = (count($arrayData) * (count($arrayData) -1))/2;
 $data = [];
+$step = 1;
 for ($i = 0; $i < $pairCount; $i++ ){
-    for($k = 0;$k < count($arrayData)-1;$k+=2){
-        $data[$i][] = [$arrayData[$k],$arrayData[$k + 1]];
-    }
+    for($k = 0;$k < count($arrayData);$k++){
+            $data[$i][] = [$arrayData[$k],$arrayData[$k+1]];
+        }
+    $step++;
 }
-
-
 var_dump($data);
