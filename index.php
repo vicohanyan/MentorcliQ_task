@@ -131,7 +131,7 @@ function downloadFile(array $file): bool
 
 
 $arrayData = ["A", "B", "C", "D","E","F"];
-$groupCount = (((count($arrayData)) * ((count($arrayData)) - 1)) / 2) / 2;
+$groupCount = (((count($arrayData)) * ((count($arrayData)) - 1)) / 2);
 $AllVariants = [];
 
 for ($i = 0; $i < count($arrayData); $i++) {
@@ -146,7 +146,8 @@ for ($i = 0; $i < count($arrayData); $i++) {
     }
 }
 $finalArray = [];
-var_dump(($AllVariants));
+var_dump($groupCount);
+var_dump(count($AllVariants));
 $loopCount = count($AllVariants) / 3;
 /** @ToDO fix this part **/
 for ($l = 0; $l < $loopCount; $l++) {
