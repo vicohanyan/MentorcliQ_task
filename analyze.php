@@ -1,35 +1,40 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <title>ImageUpload</title>
-</head>
-<body>
-<form action="index.php" method="post" enctype="multipart/form-data">
-    <label>Upload CSV</label>
-    <input type="file" name='csv_file'>
-    <br/>
-    <input type="submit" value="upload">
-</form>
-</body>
-</html>
+<?php
+const FILE_UPLOAD_FOLDER = './storage/';
+?>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Upload CSV</title>
+    </head>
+    <body>
+    <?php
+    if (!empty($_FILES['csv_file'])) {
+        if (downloadFile($_FILES['csv_file'])) { // file is downloaded and can start data analyze
+            $analyzedData = findMaxMatched();
+            if (!empty($analyzedData)) {
+                drawData($analyzedData['data'],$analyzedData['matching']);
+            } else {
+                echo "<h2>Data Is empty</h2>";
+            }
+
+        }
+    } else {
+        echo 'data is empty';
+    }
+    ?>
+    </body>
+    <style>
+        table {
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+    </style>
+    </html>
 
 <?php
-ini_set("error_reporting", 1);
-ini_set("display_errors", 1);
-ini_set("display_startup_errors", 1);
-ini_set('max_execution_time', 180);
-
-const FILE_UPLOAD_FOLDER = './storage/';
-
-if (!empty($_FILES['csv_file'])) {
-    if (downloadFile($_FILES['csv_file'])) { // file is downloaded and can start data analyze
-        $analyzedData = findMaxMatched();
-        http_redirect("recommendation.php",$analyzedData);
-    }
-} else {
-    echo 'data is empty';
-}
-
 /**
  * Find max matched group
  * @return array
@@ -37,8 +42,7 @@ if (!empty($_FILES['csv_file'])) {
 function findMaxMatched(): array
 {
     $arrayData = parseCSV(FILE_UPLOAD_FOLDER . "employees.xls");
-    // Maybe used from version 2 :)
-    // $header = $arrayData[0];
+    // remove header
     unset($arrayData[0]);
     $arrayData = array_values($arrayData);
 
@@ -49,13 +53,13 @@ function findMaxMatched(): array
     $GroupedVariants = generatePossibleGroups($AllVariants);
     $maxMatching = 0;
     $maxMatchingKey = null;
-    foreach ($GroupedVariants as $key => $data){
-        if($data['matching'] > $maxMatching){
+    foreach ($GroupedVariants as $key => $data) {
+        if ($data['matching'] > $maxMatching) {
             $maxMatching = $data['matching'];
             $maxMatchingKey = $key;
         }
     }
-    if($maxMatchingKey !== null){
+    if ($maxMatchingKey !== null) {
         return [$GroupedVariants[$maxMatchingKey]][0];
     }
     return [0];
@@ -107,7 +111,8 @@ function generateAllPossibleVariants(array $data): array
  * @param array $AllVariants
  * @return array
  */
-function generatePossibleGroups(array $AllVariants):array{
+function generatePossibleGroups(array $AllVariants): array
+{
     $finalArray = [];
     $step = 0;
     while (!empty($AllVariants)) {
@@ -115,25 +120,25 @@ function generatePossibleGroups(array $AllVariants):array{
         foreach ($AllVariants as $key => $variant) {
             if (!in_array($variant[0][1], $tempData) && !in_array($variant[1][1], $tempData)) {
                 $matching = 0;
-                if($variant[0][2] == $variant[1][2]){
+                if ($variant[0][2] == $variant[1][2]) {
                     $matching += 30;
                 }
-                if( -5 <= ($variant[0][3] - $variant[1][3]) || 5 >= ($variant[0][3] - $variant[1][3])){
+                if (-5 <= ($variant[0][3] - $variant[1][3]) || 5 >= ($variant[0][3] - $variant[1][3])) {
                     $matching += 30;
                 }
-                if($variant[0][4] == $variant[1][4]){
+                if ($variant[0][4] == $variant[1][4]) {
                     $matching += 40;
                 }
-                $finalArray[$step]["data"][] = [$variant];
+                $finalArray[$step]["data"][] = array_merge($variant,["matching" =>$matching]);
                 $finalArray[$step]["matching"] += $matching;
                 $tempData[] = $variant[0][1];
                 $tempData[] = $variant[1][1];
-                if(array_key_first($AllVariants) == $key){
+                if (array_key_first($AllVariants) == $key) {
                     unset($AllVariants[$key]);
                 }
             }
         }
-        $finalArray[$step]["matching"] = $finalArray[$step]["matching"]/ count($finalArray[$step]["data"]);
+        $finalArray[$step]["matching"] = $finalArray[$step]["matching"] / count($finalArray[$step]["data"]);
         $step++;
         if ($step > count($AllVariants)) {
             break;
@@ -164,3 +169,32 @@ function downloadFile(array $file): bool
     $newName = "employees";
     return move_uploaded_file($file_tmp, FILE_UPLOAD_FOLDER . $newName . '.' . $file_ext);
 }
+
+/**
+ * Draw data like table
+ * @param array $data
+ * @param float $matching
+ * @return void
+ */
+function drawData(array $data, float $matching): void
+{
+    echo "<h2>highest average match score {$matching}%</h2>";
+    echo "
+        <table style='border-collapse: collapse;border: 1px solid black;'><thead><tr>
+        <th>User 1</th>
+        <th>User 2</th>
+        <th>matching</th>
+        </tr></thead><tbody>
+        ";
+    foreach ($data as $datum) {
+        echo "<tr>
+                <td>{$datum[0][0]}</td>
+                <td>{$datum[1][0]}</td>
+                <td>{$datum['matching']}%</td>
+              </tr>
+        ";
+    }
+    echo "</tbody></table>";
+}
+
+
