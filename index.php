@@ -17,50 +17,48 @@
 ini_set("error_reporting", 1);
 ini_set("display_errors", 1);
 ini_set("display_startup_errors", 1);
+ini_set('max_execution_time', 180);
 
 const FILE_UPLOAD_FOLDER = './storage/';
 
 if (!empty($_FILES['csv_file'])) {
     if (downloadFile($_FILES['csv_file'])) { // file is downloaded and can start data analyze
-        parsingData();
+        $analyzedData = findMaxMatched();
+        http_redirect("recommendation.php",$analyzedData);
     }
 } else {
     echo 'data is empty';
 }
-parsingData();
 
 /**
- * Data analyse logic
+ * Find max matched group
  * @return array
  */
-function parsingData():array
+function findMaxMatched(): array
 {
     $arrayData = parseCSV(FILE_UPLOAD_FOLDER . "employees.xls");
-    $header = $arrayData[0];
+    // Maybe used from version 2 :)
+    // $header = $arrayData[0];
     unset($arrayData[0]);
     $arrayData = array_values($arrayData);
 
     // Got all possible variants by pairs
     $AllVariants = generateAllPossibleVariants($arrayData);
-//
-//    $finalArray = [];
-//    $loopCount = count($AllVariants) / 2;
-//    for ($l = 0; $l < $loopCount; $l++) {
-//        var_dump($l);
-//        $tempData = [];
-//        foreach ($AllVariants as $key => $datum) {
-//
-//            if (!in_array($key,$tempData)) {
-//                $finalArray[$l."----"][] = $datum;
-//                $tempData[] = $key;
-//                unset($AllVariants[$key]);
-//            }
-//            var_dump($tempData);
-//        }
-//    }
-//    echo "<pre>";
-//    print_r($finalArray);
-    return [];
+
+    // Got generated all possible groups
+    $GroupedVariants = generatePossibleGroups($AllVariants);
+    $maxMatching = 0;
+    $maxMatchingKey = null;
+    foreach ($GroupedVariants as $key => $data){
+        if($data['matching'] > $maxMatching){
+            $maxMatching = $data['matching'];
+            $maxMatchingKey = $key;
+        }
+    }
+    if($maxMatchingKey !== null){
+        return [$GroupedVariants[$maxMatchingKey]][0];
+    }
+    return [0];
 }
 
 /**
@@ -96,14 +94,52 @@ function generateAllPossibleVariants(array $data): array
         for ($j = 0; $j < count($data); $j++) {
             if (
                 $data[$i][1] != $data[$j][1]
-                && !array_key_exists($data[$i][1] . "-" . $data[$j][1], $AllVariants)
-                && !array_key_exists($data[$j][1] . "-" . $data[$i][1], $AllVariants)
             ) {
                 $AllVariants[$data[$i][1] . "-" . $data[$j][1]] = [$data[$i], $data[$j]];
             }
         }
     }
     return $AllVariants;
+}
+
+/**
+ * Generate possible groups from all possible pairs
+ * @param array $AllVariants
+ * @return array
+ */
+function generatePossibleGroups(array $AllVariants):array{
+    $finalArray = [];
+    $step = 0;
+    while (!empty($AllVariants)) {
+        $tempData = [];
+        foreach ($AllVariants as $key => $variant) {
+            if (!in_array($variant[0][1], $tempData) && !in_array($variant[1][1], $tempData)) {
+                $matching = 0;
+                if($variant[0][2] == $variant[1][2]){
+                    $matching += 30;
+                }
+                if( -5 <= ($variant[0][3] - $variant[1][3]) || 5 >= ($variant[0][3] - $variant[1][3])){
+                    $matching += 30;
+                }
+                if($variant[0][4] == $variant[1][4]){
+                    $matching += 40;
+                }
+                $finalArray[$step]["data"][] = [$variant];
+                $finalArray[$step]["matching"] += $matching;
+                $tempData[] = $variant[0][1];
+                $tempData[] = $variant[1][1];
+                if(array_key_first($AllVariants) == $key){
+                    unset($AllVariants[$key]);
+                }
+            }
+        }
+        $finalArray[$step]["matching"] = $finalArray[$step]["matching"]/ count($finalArray[$step]["data"]);
+        $step++;
+        if ($step > count($AllVariants)) {
+            break;
+        }
+    }
+    return $finalArray;
 }
 
 
@@ -128,37 +164,3 @@ function downloadFile(array $file): bool
     $newName = "employees";
     return move_uploaded_file($file_tmp, FILE_UPLOAD_FOLDER . $newName . '.' . $file_ext);
 }
-
-
-$arrayData = ["A", "B", "C", "D","E","F"];
-$groupCount = (((count($arrayData)) * ((count($arrayData)) - 1)) / 2);
-$AllVariants = [];
-
-for ($i = 0; $i < count($arrayData); $i++) {
-    for ($j = 0; $j < count($arrayData); $j++) {
-        if (
-            $arrayData[$i] != $arrayData[$j]
-            && !array_key_exists($arrayData[$i] . $arrayData[$j], $AllVariants)
-            && !array_key_exists($arrayData[$j] . $arrayData[$i], $AllVariants)
-        ) {
-            $AllVariants[$arrayData[$i] . $arrayData[$j]] = [$arrayData[$i], $arrayData[$j]];
-        }
-    }
-}
-$finalArray = [];
-var_dump($groupCount);
-var_dump(count($AllVariants));
-$loopCount = count($AllVariants) / 3;
-/** @ToDO fix this part **/
-for ($l = 0; $l < $loopCount; $l++) {
-    $tempData = "";
-    foreach ($AllVariants as $key => $datum) {
-        $arrayKeys = str_split($key);
-        if(!str_contains($tempData,$arrayKeys[0]) && !str_contains($tempData,$arrayKeys[1])){
-            $finalArray[$l][] = $datum;
-            $tempData .= $key;
-            unset($AllVariants[$key]);
-        }
-    }
-}
-var_dump($finalArray);
